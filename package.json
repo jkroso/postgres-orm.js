@@ -1,0 +1,23 @@
+{
+  "name": "postgres-orm",
+  "version": "0.0.0",
+  "description": "an ORM for postgress that uses promises",
+  "keywords": ["pg","orm","postgress"],
+  "dependencies": {
+    "pg-then": "1",
+    "pg": "*"
+  },
+  "devDependencies": {
+    "babel-preset-stage-0": "6",
+    "babel-preset-es2015": "6",
+    "babel-core": "6",
+    "hydro-bdd": "*",
+    "hydro-dot": "*",
+    "hydro": "*"
+  },
+  "transpile": [["*.js", "!sourcegraph/babel->js"]],
+  "repository": "git://github.com/jkroso/postgres-orm.js.git",
+  "author": "Jake Rosoman",
+  "files": ["index.js"],
+  "license": "MIT"
+}
