@@ -17,16 +17,16 @@ const Shift = db.define('shift', {
   end        : {type: 'timestamp'},
   title      : {type: 'text', limit: 50},
   description: {type: 'text'},
-  workers    : {type: [Person]},
-  employer   : {type: Person}
+  workers    : {type: [Person], reverse: 'shifts_worked'},
+  employer   : {type: Person, reverse: 'shifts_provided'}
 })
 
 const Review = db.define('review', {
   rating : {type: 'smallint'},
   message: {type: 'text'},
-  to     : {type: Person},
-  from   : {type: Person},
-  shift  : {type: Shift}
+  to     : {type: Person, reverse: 'reviews_received'},
+  from   : {type: Person, reverse: 'reviews_given'},
+  shift  : {type: Shift,  reverse: 'reviews'}
 })
 
 const main = async () => {
@@ -65,11 +65,9 @@ const main = async () => {
     shift: goatshedjob
   })
 
-  const jakes = await Person.find({first_name: 'Jake'})
-  assert(jakes[0].id == jake.id)
-  assert((await review.to).id == jake.id)
-  const shift = await review.shift
-  assert(shift.id == goatshedjob.id)
+  const [worker] = await Person.find({first_name: 'Jake'})
+  const [shift] = await worker.shifts_worked
+  assert((await shift.workers)[0] == worker)
   console.log('all passed')
 }
 
