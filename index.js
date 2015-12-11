@@ -13,7 +13,21 @@ class Connection {
     this.pool = pool
   }
   define(name, description) {
-    return new DAO(name, description, this.pool)
+    const dao = new DAO(name, description, this.pool)
+    for (var key in description) {
+      var desc = description[key]
+      if (desc.reverse != null) {
+        if (Array.isArray(desc.type))
+          desc.type[0].description[desc.reverse] = {
+            type: 'reverse_join',
+            reverseName: key,
+            table: name
+          }
+        else
+          desc.type.description[desc.reverse] = {type: 'reverse', dao, key}
+      }
+    }
+    return dao
   }
 }
 
@@ -129,27 +143,54 @@ class DAO {
    */
 
   parse(row) {
-    for (var key in this.description) {
-      var type = this.description[key].type
+    const desc = this.description
+    for (var key in desc) {
+      var type = desc[key].type
       var val = row[key]
       if (Array.isArray(type)) {
         let dao = type[0]
         let join_table = `${this.name}_${key}_join`
         row[key] = this.pool.query(`
-            SELECT "${dao.name}".*
-            FROM "${dao.name}", "${join_table}"
-            WHERE "${dao.name}".id = "${join_table}"."${key}_id"
-              AND "${join_table}"."${this.name}_id" = ${row.id};
-          `).then(result => result.rows.map(row => dao.parse(row)))
+          SELECT "${dao.name}".*
+          FROM "${dao.name}", "${join_table}"
+          WHERE "${dao.name}".id = "${join_table}"."${key}_id"
+            AND "${join_table}"."${this.name}_id" = ${row.id}
+        `).then(({rows}) => rows.map(row => dao.parse(row)))
       }
       else if (type instanceof DAO) {
+        if (typeof row[key] == 'object') continue // already got
         row[key] = type.get(val)
       }
       else if (type == 'point') row[key] = [val.x, val.y]
       else if (type == 'money') row[key] = Number(val.slice(1))
+      else if (type == 'reverse_join') row[key] = reverse_join(this, row, key)
+      else if (type == 'reverse') row[key] = reverse(this, desc[key], row)
     }
     return row
   }
+}
+
+const reverse = (self, {dao, key}, instance) =>
+  self.pool
+    .query(`SELECT * FROM "${dao.name}" WHERE "${key}" = ${instance.id}`)
+    .then(({rows}) => rows.map(row => {
+      row[key] = instance
+      return dao.parse(row)
+    }))
+
+const reverse_join = (self, row, key) => {
+  const desc = self.description[key]
+  const btable = desc.table
+  const prop = desc.reverseName
+  const jt = `${btable}_${prop}_join`
+  const sql = `
+    SELECT "${btable}".*
+    FROM "${btable}", "${jt}"
+    WHERE "${jt}"."${prop}_id" = ${row.id}
+      AND "${jt}"."${btable}_id" = "${btable}".id`
+  return self.pool
+    .query(sql)
+    .then(({rows}) => rows.map(row => row))
 }
 
 /**
