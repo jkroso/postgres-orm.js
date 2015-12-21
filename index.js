@@ -129,9 +129,14 @@ class DAO {
     return this.where(constraints.join(' AND '), cache)
   }
   where(q, cache) {
-    let sql = `SELECT * FROM ${this.name} WHERE ${q}`
+    return this.run(`SELECT * FROM ${this.name} WHERE ${q}`, cache)
+  }
+  run(sql, cache) {
     return this.pool.query(sql).then(result =>
       result.rows.map(row => this.parse(row, cache)))
+  }
+  all(cache) {
+    return this.run(`SELECT * from ${this.name}`, cache)
   }
 
   /**
