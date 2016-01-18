@@ -1,3 +1,4 @@
+import {coercePromise} from 'result'
 import pg from 'pg-then'
 
 /**
@@ -84,7 +85,7 @@ class DAO {
           ${columns.join('')}
         END;
       $$;`
-    this.ready = this.pool.query(sql)
+    this.ready = coercePromise(this.pool.query(sql))
   }
   create(data) {
     var keys = ['id']
@@ -115,13 +116,14 @@ class DAO {
       END $$;
       SELECT * FROM "${this.name}" ORDER BY id DESC LIMIT 1;
     `
-    return this.ready
-      .then(() => this.pool.query(sql))
-      .then(result => this.parse(result.rows[0]))
+    return this.query(sql).then(r => this.parse(r.rows[0]))
+  }
+  query(sql) {
+    return this.ready.then(() => this.pool.query(sql))
   }
   get(id, cache) {
     let sql = `SELECT * FROM ${this.name} WHERE id = ${id}`
-    return this.pool.query(sql).then(result => this.parse(result.rows[0], cache))
+    return this.query(sql).then(r => this.parse(r.rows[0], cache))
   }
   find(q, cache) {
     let constraints = Object.keys(q).map(key =>
@@ -132,8 +134,7 @@ class DAO {
     return this.run(`SELECT * FROM ${this.name} WHERE ${q}`, cache)
   }
   run(sql, cache) {
-    return this.pool.query(sql).then(result =>
-      result.rows.map(row => this.parse(row, cache)))
+    return this.query(sql).then(({rows}) => rows.map(row => this.parse(row, cache)))
   }
   all(cache) {
     return this.run(`SELECT * from ${this.name}`, cache)
@@ -161,7 +162,7 @@ class DAO {
       if (Array.isArray(type)) {
         let dao = type[0]
         let join_table = `${this.name}_${key}_join`
-        row[key] = this.pool.query(`
+        row[key] = this.query(`
           SELECT "${dao.name}".*
           FROM "${dao.name}", "${join_table}"
           WHERE "${dao.name}".id = "${join_table}"."${key}_id"
@@ -182,12 +183,11 @@ class DAO {
 }
 
 const reverse = (self, {dao, key}, instance, cache) =>
-  self.pool
-    .query(`SELECT * FROM "${dao.name}" WHERE "${key}" = ${instance.id}`)
-    .then(({rows}) => rows.map(row => {
-      row[key] = instance
-      return dao.parse(row, cache)
-    }))
+  self.query(`SELECT * FROM "${dao.name}" WHERE "${key}" = ${instance.id}`)
+      .then(({rows}) => rows.map(row => {
+        row[key] = instance
+        return dao.parse(row, cache)
+      }))
 
 const reverse_join = (self, row, key, cache) => {
   const desc = self.description[key]
@@ -199,10 +199,8 @@ const reverse_join = (self, row, key, cache) => {
     FROM "${btable}", "${jt}"
     WHERE "${jt}"."${prop}_id" = ${row.id}
       AND "${jt}"."${btable}_id" = "${btable}".id`
-  return self.pool
-    .query(sql)
-    .then(({rows}) =>
-      rows.map(row => desc.table.parse(row, cache)))
+  return self.query(sql).then(({rows}) =>
+    rows.map(row => desc.table.parse(row, cache)))
 }
 
 /**

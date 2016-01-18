@@ -5,6 +5,7 @@
   "keywords": ["pg","orm","postgress"],
   "dependencies": {
     "pg-then": "1",
+    "result": "2",
     "pg": "*"
   },
   "devDependencies": {
