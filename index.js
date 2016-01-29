@@ -159,6 +159,7 @@ class DAO {
     for (var key in desc) {
       var type = desc[key].type
       var val = row[key]
+      if (val == null) continue
       if (Array.isArray(type)) {
         let dao = type[0]
         let join_table = `${this.name}_${key}_join`
