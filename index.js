@@ -74,7 +74,7 @@ class DAO {
                         AND column_name='${key}')
         THEN
           ${extra}
-          ALTER TABLE "${name}" ADD COLUMN "${key}" ${type};
+          ALTER TABLE "${name}" ADD COLUMN "${key}" ${type} ${constraints(desc)};
         END IF;
       `
     })
@@ -181,6 +181,13 @@ class DAO {
     }
     return row
   }
+}
+
+const constraints = (desc) => {
+  const out = []
+  if (desc.unique) out.push('UNIQUE')
+  if (desc.required) out.push('NOT NULL')
+  return out.join(' ')
 }
 
 const reverse = (self, {dao, key}, instance, cache) =>
