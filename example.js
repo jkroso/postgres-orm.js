@@ -5,6 +5,7 @@ const db = connect('postgres://localhost/test')
 
 const Person = db.define('person', {
   first_name: {type: 'text', limit: 50},
+  middle_names: {type: 'text[]'},
   last_name : {type: 'text', limit: 50},
   gender    : {type: 'enum', values: ['male', 'female']},
   birth     : {type: 'timestamp'},
@@ -33,6 +34,7 @@ const main = async () => {
   const jake = await Person.create({
     first_name: 'Jake',
     last_name : 'Rosoman',
+    middle_names: ['Kale'],
     gender: 'male',
     birth: new Date(1991, 4, 29),
     pay_rate: 20,
@@ -68,6 +70,8 @@ const main = async () => {
   const [worker] = await Person.find({first_name: 'Jake'})
   const [shift] = await worker.shifts_worked
   assert((await shift.workers)[0] == worker)
+  assert((await worker.reviews_received)[0].to == worker)
+  console.log(worker)
   console.log('all passed')
 }
 

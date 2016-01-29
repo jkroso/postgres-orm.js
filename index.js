@@ -244,6 +244,14 @@ encode.text = str => {
   str = str.replace(/\\/g, '\\\\')
   return `${backslash ? 'E' : ''}'${str}'`
 }
+encode['text[]'] = vals => {
+  var str = 'ARRAY['
+  for (let i = 0, len = vals.length; i < len; i++) {
+    str += literal(vals[i])
+    if (i < len - 1) str += ','
+  }
+  return str + ']'
+}
 
 /**
  * Generate a postgres type declaration

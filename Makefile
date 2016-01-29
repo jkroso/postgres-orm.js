@@ -1,4 +1,7 @@
 example: node_modules
-	@future-node $@
+	@$</.bin/future-node $@.js
+
+node_modules: package.json
+	@npm install
 
 PHONY: example
